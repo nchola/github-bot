@@ -4,47 +4,66 @@ const simpleGit = require('simple-git');
 
 const FILE_PATH = './data.json';
 
-const makeCommit = (numCommits) => {
-    // Rekursi untuk membuat banyak commit
-    const commitRecursive = (n, date) => {
-        if (n === 0) {
-            console.log('Semua commit berhasil dibuat.');
-            return;
-        }
+// Fungsi untuk mendapatkan angka random dalam rentang tertentu
+const getRandomInt = (min, max) => {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+};
 
-        const data = {
-            date: date.format()
-        }
+const makeCommit = async () => {
+    try {
+        // Fungsi untuk membuat commit pada tanggal tertentu
+        const makeCommitsForDate = async (date, numCommits) => {
+            const git = simpleGit();
+            
+            for (let i = 0; i < numCommits; i++) {
+                const data = {
+                    date: date.format(),
+                    commit: i + 1
+                };
 
-        jsonfile.writeFile(FILE_PATH, data, (err) => {
-            if (err) {
-                console.error('Gagal menulis ke file:', err);
-                return;
+                try {
+                    await jsonfile.writeFile(FILE_PATH, data);
+                    console.log(`Data berhasil ditulis ke file untuk tanggal ${date.format('YYYY-MM-DD')} commit ke-${i + 1}`);
+
+                    await git.add([FILE_PATH]);
+                    await git.commit(`Commit ${i + 1} pada ${date.format('YYYY-MM-DD')}`, { '--date': date.format() });
+                    console.log(`Commit ${i + 1} berhasil dibuat untuk tanggal ${date.format('YYYY-MM-DD')}`);
+                } catch (error) {
+                    console.error('Error saat membuat commit:', error.message);
+                }
             }
+        };
 
-            console.log('Data berhasil ditulis ke file.');
+        // Tanggal mulai dan akhir (1 bulan)
+        const startDate = moment('2024-09-01');
+        const endDate = moment(startDate).add(1, 'month');
 
-            simpleGit()
-                .add([FILE_PATH])
-                .commit(date.format(), { '--date': date.format() }, (commitErr) => {
-                    if (commitErr) {
-                        console.error('Gagal melakukan komit:', commitErr);
-                        return;
-                    }
-                    console.log('Perubahan berhasil di-komit.');
+        // Jumlah hari antara tanggal mulai dan akhir
+        const totalDays = endDate.diff(startDate, 'days');
 
-                    // Panggil rekursi untuk membuat commit berikutnya
-                    commitRecursive(n - 1, date.add(1, 'd'));
-                });
-        });
+        console.log(`Akan membuat commit untuk ${totalDays} hari dari ${startDate.format('YYYY-MM-DD')} hingga ${endDate.format('YYYY-MM-DD')}`);
+
+        // Proses pembuatan commit untuk setiap hari
+        for (let i = 0; i <= totalDays; i++) {
+            const currentDate = moment(startDate).add(i, 'days');
+            // Random jumlah commit antara 0-20
+            const numCommits = getRandomInt(0, 20);
+            
+            if (numCommits > 0) {
+                console.log(`\nMembuat ${numCommits} commit untuk tanggal ${currentDate.format('YYYY-MM-DD')}`);
+                await makeCommitsForDate(currentDate, numCommits);
+            } else {
+                console.log(`\nTidak ada commit untuk tanggal ${currentDate.format('YYYY-MM-DD')}`);
+            }
+        }
+        
+        console.log('\nSemua commit berhasil dibuat!');
+    } catch (error) {
+        console.error('Terjadi error:', error.message);
     }
+};
 
-    // Tanggal yang diinginkan
-    const desiredDate = moment('2025-01-01');
-
-    // Memulai proses rekursi
-    commitRecursive(numCommits, desiredDate);
-}
-
-// Panggil fungsi makeCommit untuk membuat sejumlah commit pada tanggal 13 Maret 2023
-makeCommit(10);
+// Jalankan fungsi utama
+makeCommit().catch(error => {
+    console.error('Error utama:', error.message);
+});
